@@ -576,6 +576,12 @@ export type PublicApiType = {
           wifi: { network: string; password: string } | null;
         } | null
       >;
+      directory: FunctionReference<
+        "query",
+        "public",
+        Record<string, never>,
+        Array<{ brandName?: string; name: string; slug: string }>
+      >;
     };
     pin: {
       unlock: FunctionReference<
