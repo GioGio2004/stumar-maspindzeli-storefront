@@ -26,6 +26,8 @@ export function HowItWorks({
   visual?: (step: number) => ReactNode;
 }) {
   const [active, setActive] = useState(0);
+  // Steps can change live (the admin preview); never point past the end.
+  const current = Math.min(active, Math.max(0, steps.length - 1));
   const reduce = useReducedMotion();
   const dark = tone === "dark";
 
@@ -58,21 +60,21 @@ export function HowItWorks({
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={active}
+            key={current}
             className="absolute inset-0 grid place-items-center p-4"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.35, ease }}
           >
-            {visual ? visual(active) : <IconVisual step={steps[active]} dark={dark} />}
+            {visual ? visual(current) : steps[current] ? <IconVisual step={steps[current]} dark={dark} /> : null}
           </motion.div>
         </AnimatePresence>
       </div>
 
       <ol className="mt-2 space-y-1">
         {steps.map((step, i) => {
-          const on = i === active;
+          const on = i === current;
           return (
             <li key={step.title}>
               <button
@@ -107,7 +109,7 @@ export function HowItWorks({
                 </span>
                 {on && !reduce && (
                   <motion.span
-                    key={`progress-${active}`}
+                    key={`progress-${current}`}
                     aria-hidden="true"
                     className="absolute bottom-0 left-0 h-[3px] rounded-full bg-lime"
                     initial={{ width: "0%" }}

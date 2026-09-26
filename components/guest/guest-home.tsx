@@ -1,13 +1,15 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { ArrowRight, ArrowUpRight, Check, DoorOpen, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/convex/api";
-import { itemsFor, orderable, type StorefrontData, type Tile } from "@/lib/storefront";
+import { gel, hotelNow, itemsFor, orderable, type StorefrontData, type Tile } from "@/lib/storefront";
 import { cn } from "@/lib/utils";
+import { GuestAccessProvider } from "./access";
 import { Clover, Dots, Leaf, Ring, Star4 } from "./glyphs";
+import { AnimationsPaused } from "./hooks";
 import { iconFor, IconByKey } from "./icons";
 import { notchMask } from "./notch";
 import { PanelBody } from "./panels";
@@ -45,12 +47,16 @@ function buildSamples(data: StorefrontData): ConciergeSample[] {
       question: "What time is check-out?",
       answer: `Check-out is at ${data.hotel.checkoutTime ?? "12:00"}. Want me to ask for a later time?`,
     },
-    { lang: "KA", question: "შეიძლება 2 პირსახოცი?", answer: "რა თქმა უნდა! პირსახოცები უკვე გზაშია." },
+    {
+      lang: "KA",
+      question: "რომელ საათამდე უნდა გავათავისუფლო ნომერი?",
+      answer: `ნომერი უნდა გაათავისუფლოთ ${data.hotel.checkoutTime ?? "12:00"}-მდე.`,
+    },
     dish
       ? {
           lang: "RU",
           question: "Что можно заказать в номер?",
-          answer: `Например, «${dish.title}»${dish.price !== undefined ? ` за ${dish.price}₾` : ""}. Заказать?`,
+          answer: `Например, «${dish.title}»${dish.price !== undefined ? ` за ${gel(dish.price)}` : ""}. Заказ можно сделать в разделе еды.`,
         }
       : { lang: "RU", question: "Во сколько выезд?", answer: `Выезд в ${data.hotel.checkoutTime ?? "12:00"}.` },
   ];
@@ -61,9 +67,19 @@ function buildSamples(data: StorefrontData): ConciergeSample[] {
  * edit in the admin. `token` is set when the page was opened from a room tag.
  */
 export function GuestHome({ data, token }: { data: StorefrontData; token: string | null }) {
+  return (
+    <GuestAccessProvider token={token} hasStay={Boolean(data.stay)} pinRequired={data.stay?.pinRequired ?? false}>
+      <GuestHomeInner data={data} token={token} />
+    </GuestAccessProvider>
+  );
+}
+
+function GuestHomeInner({ data, token }: { data: StorefrontData; token: string | null }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [weekday] = useState(() => new Date().getDay());
+  // "Today" is the hotel's day, on the server and in the browser alike.
+  const [weekday] = useState(() => hotelNow(data.hotel.timezone).weekday);
+  const toastTimer = useRef<number | undefined>(undefined);
   const lastOpened = useRef<string | null>(null);
   const track = useMutation(api.guest.events.track);
 
@@ -90,8 +106,10 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
   const onSent = useCallback((message: string) => {
     setOpenId(null);
     setToast(message);
-    window.setTimeout(() => setToast(null), 2600);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     if (!openId) return;
@@ -99,7 +117,8 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
     const previous = root.style.overflow;
     root.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      // Not while an IME (Georgian / Russian keyboards) is composing text.
+      if (e.key === "Escape" && !e.isComposing) close();
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -120,12 +139,13 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
   const concierge = tiles.find((t) => t.type === "concierge") ?? tiles[0];
 
   return (
+    <AnimationsPaused.Provider value={openId !== null}>
     <MotionConfig reducedMotion="user">
       <div id="top" inert={openId !== null} className="mx-auto w-full max-w-[1400px] flex-1 px-3 sm:px-6">
         <header className="flex h-20 items-center justify-between gap-4 sm:h-24">
           <a href="#top" className="flex min-w-0 items-center gap-2.5" aria-label={`${data.hotel.name}, home`}>
             <Dots className="size-6 shrink-0" />
-            <span className="text-[22px] font-bold tracking-tight">{brand}</span>
+            <span className="truncate text-[22px] font-bold tracking-tight">{brand}</span>
             {data.hotel.brandName && (
               <span className="hidden truncate border-l border-black/15 pl-3 text-sm text-black/55 sm:block">{data.hotel.name}</span>
             )}
@@ -174,7 +194,11 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
                       <TileCard
                         tile={cell}
                         onOpen={() => open(cell)}
-                        preview={<TilePreview tile={cell} data={data} roomLabel={roomLabel} weekday={weekday} samples={samples} />}
+                        preview={
+                          <LayoutGroup id={cell.id}>
+                            <TilePreview tile={cell} data={data} roomLabel={roomLabel} weekday={weekday} samples={samples} />
+                          </LayoutGroup>
+                        }
                       />
                     )}
                   </motion.div>
@@ -204,7 +228,7 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
       <AnimatePresence>
         {openTile && (
           <FeaturePanel key={openTile.id} tile={openTile} onClose={close}>
-            <PanelBody tile={openTile} data={data} token={token} roomLabel={roomLabel} weekday={weekday} samples={samples} onSent={onSent} />
+            <PanelBody tile={openTile} data={data} roomLabel={roomLabel} weekday={weekday} samples={samples} onSent={onSent} />
           </FeaturePanel>
         )}
       </AnimatePresence>
@@ -222,8 +246,9 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
         )}
       </AnimatePresence>
 
-      <Tracker token={token} />
+      <Tracker inert={openId !== null} />
     </MotionConfig>
+    </AnimationsPaused.Provider>
   );
 }
 
@@ -268,7 +293,7 @@ function Hero({ data, nav, onOpen }: { data: StorefrontData; nav: Tile[]; onOpen
           <Words text={s.heroTitle} offset={0} />
           {mark.length > 0 && (
             <>
-              <span className="relative inline-block whitespace-nowrap">
+              <span className="relative inline-block max-w-full sm:whitespace-nowrap">
                 <Scribble className="-inset-x-[6%] -inset-y-[18%] h-[136%] w-[112%]" delay={1.1} />
                 {mark.map((word, i) => (
                   <span key={`${word}-${i}`}>

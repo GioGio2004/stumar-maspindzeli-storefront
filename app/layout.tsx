@@ -24,7 +24,7 @@ const georgian = Noto_Sans_Georgian({
 });
 
 export const metadata: Metadata = {
-  title: "Gino Seaside Tbilisi · Guest",
+  title: "Guest",
   description: "Room requests, the water park, spa, dining and a concierge for your stay.",
   applicationName: "Guest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Guest" },

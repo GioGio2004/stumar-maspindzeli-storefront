@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { Pencil, Ticket, Wifi } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { eventsToday, itemByKey, itemsFor, orderable, type Item, type ResortEvent, type StorefrontData, type Tile } from "@/lib/storefront";
+import { eventsToday, gel, itemByKey, itemsFor, orderable, type Item, type ResortEvent, type StorefrontData, type Tile } from "@/lib/storefront";
 import { Clover, Ring, Star4 } from "./glyphs";
 import { statusLabel, useTicker, type RequestStatus } from "./hooks";
 import { iconFor } from "./icons";
@@ -88,7 +88,7 @@ const STAGES: RequestStatus[] = ["open", "accepted", "in_progress", "done"];
 function RequestsPreview({ items, roomLabel }: { items: Item[]; roomLabel: string }) {
   const tick = useTicker(1700);
   const rows = items.slice(0, 3);
-  if (rows.length === 0) return <Placeholder text="Add request items to this section in the catalog." />;
+  if (rows.length === 0) return <Placeholder text="Coming soon" />;
   return (
     <div className="rounded-2xl bg-paper p-3 ring-1 ring-black/5">
       <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-medium uppercase tracking-wider text-black/45">
@@ -135,7 +135,7 @@ function Wave({ className }: { className?: string }) {
 }
 
 function TicketPreview({ item, hours }: { item?: Item; hours?: string }) {
-  if (!item) return <Placeholder text="Pick the featured item for this card in the admin." />;
+  if (!item) return <Placeholder text="Ask reception for details" />;
   return (
     <div>
       <div style={notchMask(["left", "right"], { length: 30, depth: 10 })} className="flex items-center gap-3 rounded-2xl bg-ink py-3 pl-5 pr-4 text-white">
@@ -213,7 +213,7 @@ function ConciergePreview({ samples }: { samples: ConciergeSample[] }) {
 function MenuPreview({ items, roomLabel }: { items: Item[]; roomLabel: string }) {
   const tick = useTicker(1800);
   const lines = items.slice(0, 3);
-  if (lines.length === 0) return <Placeholder text="Add priced items to this section." dark />;
+  if (lines.length === 0) return <Placeholder text="The menu is coming soon" dark />;
   const count = ((tick + lines.length - 1) % lines.length) + 1;
   const shown = lines.slice(0, count);
   const total = shown.reduce((sum, line) => sum + (line.price ?? 0), 0);
@@ -242,7 +242,7 @@ function MenuPreview({ items, roomLabel }: { items: Item[]; roomLabel: string })
                 <span className="size-1.5 shrink-0 rounded-full bg-lime ring-1 ring-black/10" />
                 <span className="truncate">{line.title}</span>
               </span>
-              <span className="tabular-nums">{line.price ?? 0}₾</span>
+              <span className="tabular-nums">{gel(line.price ?? 0)}</span>
             </motion.li>
           ))}
         </AnimatePresence>
@@ -251,7 +251,7 @@ function MenuPreview({ items, roomLabel }: { items: Item[]; roomLabel: string })
         <span>Total</span>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span key={total} className="tabular-nums" initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -8, opacity: 0 }}>
-            {total}₾
+            {gel(total)}
           </motion.span>
         </AnimatePresence>
       </div>
@@ -262,7 +262,7 @@ function MenuPreview({ items, roomLabel }: { items: Item[]; roomLabel: string })
 function BookingPreview({ items, slots }: { items: Item[]; slots: string[] }) {
   const tick = useTicker(1400);
   const shownSlots = slots.slice(0, 4);
-  if (items.length === 0) return <Placeholder text="Add bookable items to this section." />;
+  if (items.length === 0) return <Placeholder text="Coming soon" />;
   const selected = shownSlots.length ? (tick + 2) % shownSlots.length : -1;
   const item = items[Math.floor(tick / Math.max(1, shownSlots.length)) % Math.min(3, items.length)];
   return (
@@ -358,7 +358,7 @@ function StayPreview({ wifi, checkout }: { wifi: StorefrontData["wifi"]; checkou
 const GLYPHS = [Star4, Clover, Ring];
 
 function LinksPreview({ items }: { items: Item[] }) {
-  if (items.length === 0) return <Placeholder text="Add link items to this section." />;
+  if (items.length === 0) return <Placeholder text="Coming soon" />;
   return (
     <div className="space-y-1.5">
       {items.slice(0, 3).map((item, i) => {

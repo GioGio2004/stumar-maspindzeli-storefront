@@ -2,23 +2,25 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, ChevronUp, LoaderCircle, Star } from "lucide-react";
+import { Check, ChevronUp, LoaderCircle, Star, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/convex/api";
 import type { GuestTask } from "@/lib/storefront";
 import { cn } from "@/lib/utils";
+import { errorInfo, useGuestAccess } from "./access";
 import { statusLabel, statusOrder, type RequestStatus } from "./hooks";
 
 /** Floating "my requests" pill. Live: it moves the moment staff accept or finish. */
-export function Tracker({ token }: { token: string | null }) {
-  const tasks = useQuery(api.guest.requests.list, token ? { token } : "skip");
+export function Tracker({ inert }: { inert?: boolean }) {
+  const { token, keyArg, unlocked } = useGuestAccess();
+  const tasks = useQuery(api.guest.requests.list, token && unlocked ? { token, key: keyArg } : "skip");
   const [open, setOpen] = useState(false);
   const visible = (tasks ?? []).filter((t) => t.status !== "cancelled");
   const latest = visible[0];
   const active = visible.filter((t) => t.status !== "done").length;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-3">
+    <div inert={inert} className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-3">
       <AnimatePresence>
         {latest && (
           <motion.div
@@ -39,7 +41,7 @@ export function Tracker({ token }: { token: string | null }) {
                   transition={{ duration: 0.25 }}
                 >
                   {visible.map((task) => (
-                    <RequestRow key={task.id} task={task} token={token!} />
+                    <RequestRow key={task.id} task={task} />
                   ))}
                 </motion.ul>
               )}
@@ -73,10 +75,25 @@ export function Tracker({ token }: { token: string | null }) {
   );
 }
 
-function RequestRow({ task, token }: { task: GuestTask; token: string }) {
+function RequestRow({ task }: { task: GuestTask }) {
+  const { token, keyArg, clearKey } = useGuestAccess();
   const rate = useMutation(api.guest.requests.rate);
+  const cancel = useMutation(api.guest.requests.cancel);
+  const [error, setError] = useState<string | null>(null);
   const status = task.status as RequestStatus;
   const step = statusOrder.indexOf(status);
+
+  const run = async (action: () => Promise<unknown>) => {
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      const info = errorInfo(e);
+      if (info.code === "PIN_REQUIRED") clearKey();
+      setError(info.message);
+    }
+  };
+
   return (
     <li className="rounded-[20px] bg-paper p-3.5">
       <div className="flex items-start justify-between gap-3">
@@ -104,6 +121,18 @@ function RequestRow({ task, token }: { task: GuestTask; token: string }) {
           </span>
         ))}
       </div>
+      {status === "open" && (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            onClick={() => run(() => cancel({ token: token!, key: keyArg, taskId: task.id }))}
+            className="inline-flex h-8 items-center gap-1 rounded-full bg-white px-3 text-[12px] font-medium ring-1 ring-black/10 transition hover:bg-ink hover:text-white"
+          >
+            <X className="size-3.5" />
+            Cancel request
+          </button>
+        </div>
+      )}
       {status === "done" && (
         <div className="mt-3 flex items-center justify-between">
           <span className="text-[12px] text-black/50">{task.rating ? "Thanks for rating!" : "How did we do?"}</span>
@@ -113,7 +142,7 @@ function RequestRow({ task, token }: { task: GuestTask; token: string }) {
                 key={n}
                 type="button"
                 aria-label={`Rate ${n} out of 5`}
-                onClick={() => rate({ token, taskId: task.id, rating: n }).catch(() => {})}
+                onClick={() => run(() => rate({ token: token!, key: keyArg, taskId: task.id, rating: n }))}
                 className="grid size-8 place-items-center rounded-full hover:bg-white"
               >
                 <Star className={cn("size-4", (task.rating ?? 0) >= n ? "fill-ink text-ink" : "text-black/25")} />
@@ -122,6 +151,7 @@ function RequestRow({ task, token }: { task: GuestTask; token: string }) {
           </div>
         </div>
       )}
+      {error && <p className="mt-2 text-[12px] text-red-600">{error}</p>}
     </li>
   );
 }
