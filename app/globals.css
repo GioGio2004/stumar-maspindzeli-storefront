@@ -9,6 +9,7 @@
  * white page, warm stone panels, graphite cards, lime used sparingly.
  */
 
+ 
 @theme inline {
   --font-sans: var(--font-red-hat), var(--font-noto-georgian), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-red-hat), var(--font-noto-georgian), ui-sans-serif, system-ui, sans-serif;
