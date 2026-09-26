@@ -243,3 +243,137 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/*
+ * Intro / loading screen (components/guest/intro.tsx). The pop-in is a CSS
+ * animation so it runs from the first paint; data-phase drives the rest with
+ * transitions. Animations use fill-mode `backwards` so the transitions that
+ * follow start from the element's own value.
+ */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.intro-doors {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: 1fr 1fr / 1fr 1fr;
+  gap: 6px;
+  clip-path: inset(calc(50% - 66px) calc(50% - 66px) round 22px);
+  animation: intro-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s backwards;
+  transition: clip-path 0.65s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.intro:not([data-phase="mark"]) .intro-doors {
+  clip-path: inset(0 0 0 0 round 22px);
+}
+.intro-door {
+  position: relative;
+  border-radius: 22px;
+  transition: transform 0.85s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.intro[data-phase="open"] .intro-door[data-door="tl"] {
+  transform: translate(-101%, -4%);
+}
+.intro[data-phase="open"] .intro-door[data-door="tr"] {
+  transform: translate(101%, -4%);
+}
+.intro[data-phase="open"] .intro-door[data-door="bl"] {
+  transform: translate(-101%, 4%);
+  transition-delay: 0.05s;
+}
+.intro[data-phase="open"] .intro-door[data-door="br"] {
+  transform: translate(101%, 4%);
+  transition-delay: 0.05s;
+}
+/* Each glyph sits in the corner that touches the middle of the screen and grows from there. */
+.intro-glyph {
+  position: absolute;
+  display: grid;
+  width: 63px;
+  height: 63px;
+  place-items: center;
+  transition: transform 0.65s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.intro-door[data-door="tl"] .intro-glyph {
+  right: 0;
+  bottom: 0;
+  transform-origin: 100% 100%;
+}
+.intro-door[data-door="tr"] .intro-glyph {
+  left: 0;
+  bottom: 0;
+  transform-origin: 0 100%;
+}
+.intro-door[data-door="bl"] .intro-glyph {
+  right: 0;
+  top: 0;
+  transform-origin: 100% 0;
+}
+.intro-door[data-door="br"] .intro-glyph {
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.intro:not([data-phase="mark"]) .intro-glyph {
+  transform: scale(1.9);
+}
+.intro-glyph-inner {
+  display: block;
+  animation: intro-spin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0s) backwards;
+  transition:
+    transform 0.5s cubic-bezier(0.76, 0, 0.24, 1),
+    opacity 0.5s;
+}
+.intro[data-phase="open"] .intro-glyph-inner {
+  opacity: 0;
+  transform: scale(0.5) rotate(90deg);
+}
+.intro-brand {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% + 92px);
+  display: flex;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: opacity 0.3s;
+}
+.intro-brand > span {
+  display: inline-block;
+  overflow: hidden;
+}
+.intro-brand > span > span {
+  display: inline-block;
+  white-space: pre;
+  animation: intro-letter 0.5s cubic-bezier(0.22, 1, 0.36, 1) calc(0.35s + var(--i) * 22ms) backwards;
+}
+.intro:not([data-phase="mark"]) .intro-brand {
+  opacity: 0;
+}
+@keyframes intro-pop {
+  from {
+    clip-path: inset(50% 50% 50% 50% round 22px);
+  }
+}
+@keyframes intro-spin {
+  from {
+    transform: scale(0) rotate(-135deg);
+  }
+}
+@keyframes intro-letter {
+  from {
+    transform: translateY(110%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro,
+  .intro * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

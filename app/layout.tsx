@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, Noto_Sans_Georgian, Red_Hat_Display } from "next/font/google";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
+import { Intro } from "@/components/guest/intro";
 import { ThemeProvider } from "@/components/theme";
 import "./globals.css";
 
@@ -60,7 +61,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <ConvexClientProvider>
+            {/* Loading screen first, whichever page the guest opens (QR, NFC tag, installed app). */}
+            <Intro>{children}</Intro>
+          </ConvexClientProvider>
         </ThemeProvider>
       </body>
     </html>
