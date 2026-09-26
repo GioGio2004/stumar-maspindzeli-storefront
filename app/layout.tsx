@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, Noto_Sans_Georgian, Red_Hat_Display } from "next/font/google";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
-import { ScrollIndicator } from "@/components/scroll-indicator";
 import { ThemeProvider } from "@/components/theme";
 import "./globals.css";
 
@@ -35,6 +34,14 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
+  // The image itself comes from app/opengraph-image.tsx.
+  openGraph: {
+    type: "website",
+    siteName: "Stumar Maspindzeli",
+    title: "Stumar Maspindzeli · Guest app",
+    description: "Room requests, dining, spa and a concierge for your stay, one tap away.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
@@ -54,7 +61,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
           <ConvexClientProvider>{children}</ConvexClientProvider>
-          <ScrollIndicator />
         </ThemeProvider>
       </body>
     </html>

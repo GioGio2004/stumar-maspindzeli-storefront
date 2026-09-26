@@ -5,10 +5,16 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { ThemeProvider as NextThemes, useTheme } from "next-themes";
 import { useSyncExternalStore, type ReactNode } from "react";
 
+// next-themes sets the theme with an inline script in the server HTML. If React
+// ever renders it on the client (e.g. recovering from an error), React 19 warns
+// about script tags; marking it as a JSON data block there keeps it quiet. The
+// script carries suppressHydrationWarning, so the differing type is fine.
+const scriptProps = { type: typeof window === "undefined" ? "text/javascript" : "application/json" };
+
 /** Follows the guest's phone setting by default. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
-    <NextThemes attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <NextThemes attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange scriptProps={scriptProps}>
       {children}
     </NextThemes>
   );
