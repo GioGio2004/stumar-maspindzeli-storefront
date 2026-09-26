@@ -1,17 +1,26 @@
 "use client";
 
 import { useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-/** Counter that ticks every `ms`. Stays at 0 when the guest prefers reduced motion. */
+/** True while a panel covers the page: tile animations stop working in the background. */
+export const AnimationsPaused = createContext(false);
+
+/**
+ * Counter that ticks every `ms`. Stays still for reduced-motion users, while
+ * a panel is open, and while the tab is hidden, to spare low-end phones.
+ */
 export function useTicker(ms: number, enabled = true) {
   const [tick, setTick] = useState(0);
   const reduce = useReducedMotion();
+  const paused = useContext(AnimationsPaused);
   useEffect(() => {
-    if (!enabled || reduce) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), ms);
+    if (!enabled || reduce || paused) return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") setTick((t) => t + 1);
+    }, ms);
     return () => window.clearInterval(id);
-  }, [ms, enabled, reduce]);
+  }, [ms, enabled, reduce, paused]);
   return tick;
 }
 

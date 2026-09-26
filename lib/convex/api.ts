@@ -22,6 +22,7 @@ export type PublicApiType = {
         externalId: string;
         imageUrl?: string;
         name: string;
+        profileSyncedAt?: number;
       } | null
     >;
     me: FunctionReference<
@@ -37,6 +38,7 @@ export type PublicApiType = {
           externalId: string;
           imageUrl?: string;
           name: string;
+          profileSyncedAt?: number;
         };
       } | null
     >;
@@ -294,7 +296,7 @@ export type PublicApiType = {
       cancel: FunctionReference<
         "mutation",
         "public",
-        { taskId: Id<"tasks">; token: string },
+        { key?: string; taskId: Id<"tasks">; token: string },
         null
       >;
       create: FunctionReference<
@@ -304,6 +306,7 @@ export type PublicApiType = {
           detail?: string;
           itemId?: Id<"catalogItems">;
           itemKey?: string;
+          key?: string;
           note?: string;
           quantity?: number;
           token: string;
@@ -314,6 +317,7 @@ export type PublicApiType = {
         "mutation",
         "public",
         {
+          key?: string;
           lines: Array<{
             itemId?: Id<"catalogItems">;
             itemKey?: string;
@@ -327,7 +331,7 @@ export type PublicApiType = {
       list: FunctionReference<
         "query",
         "public",
-        { token: string },
+        { key?: string; token: string },
         Array<{
           acceptedAt?: number;
           createdAt: number;
@@ -345,7 +349,7 @@ export type PublicApiType = {
       rate: FunctionReference<
         "mutation",
         "public",
-        { rating: number; taskId: Id<"tasks">; token: string },
+        { key?: string; rating: number; taskId: Id<"tasks">; token: string },
         null
       >;
     };
@@ -394,6 +398,7 @@ export type PublicApiType = {
             name: string;
             phone?: string;
             slug: string;
+            timezone: string;
           };
           items: Array<{
             allowNote: boolean;
@@ -431,6 +436,7 @@ export type PublicApiType = {
             checkInAt: number;
             expectedCheckOutAt: number;
             language?: string;
+            pinRequired: boolean;
           } | null;
           tiles: Array<{
             blurb: string;
@@ -491,6 +497,7 @@ export type PublicApiType = {
             name: string;
             phone?: string;
             slug: string;
+            timezone: string;
           };
           items: Array<{
             allowNote: boolean;
@@ -528,6 +535,7 @@ export type PublicApiType = {
             checkInAt: number;
             expectedCheckOutAt: number;
             language?: string;
+            pinRequired: boolean;
           } | null;
           tiles: Array<{
             blurb: string;
@@ -569,6 +577,14 @@ export type PublicApiType = {
         } | null
       >;
     };
+    pin: {
+      unlock: FunctionReference<
+        "mutation",
+        "public",
+        { pin: string; token: string },
+        { key: string | null; ok: true } | { message: string; ok: false }
+      >;
+    };
   };
   hotels: {
     create: FunctionReference<
@@ -596,6 +612,7 @@ export type PublicApiType = {
           name: string;
           ownerUserId: Id<"users">;
           phone?: string;
+          requireGuestPin?: boolean;
           slug: string;
           timezone?: string;
           wifiName?: string;
@@ -624,6 +641,7 @@ export type PublicApiType = {
         name: string;
         ownerUserId: Id<"users">;
         phone?: string;
+        requireGuestPin?: boolean;
         slug: string;
         timezone?: string;
         wifiName?: string;
@@ -643,6 +661,7 @@ export type PublicApiType = {
         hotelId: Id<"hotels">;
         name?: string;
         phone?: string;
+        requireGuestPin?: boolean;
         timezone?: string;
         wifiName?: string;
         wifiPassword?: string;
@@ -693,7 +712,7 @@ export type PublicApiType = {
         onShift: boolean;
         role: "manager" | "reception" | "staff";
         userId: Id<"users">;
-      }
+      } | null
     >;
     update: FunctionReference<
       "mutation",
@@ -880,7 +899,9 @@ export type PublicApiType = {
           checkedOutAt?: number;
           children?: number;
           expectedCheckOutAt: number;
+          guestKey?: string;
           guestLabel?: string;
+          guestPin?: string;
           hotelId: Id<"hotels">;
           language?: string;
           note?: string;
@@ -902,6 +923,7 @@ export type PublicApiType = {
           detail?: string;
           doneAt?: number;
           escalatedAt?: number;
+          firstAcceptedAt?: number;
           guestNote?: string;
           hotelId: Id<"hotels">;
           itemId?: Id<"catalogItems">;
@@ -937,7 +959,9 @@ export type PublicApiType = {
         checkedOutAt?: number;
         children?: number;
         expectedCheckOutAt: number;
+        guestKey?: string;
         guestLabel?: string;
+        guestPin?: string;
         hotelId: Id<"hotels">;
         language?: string;
         note?: string;
@@ -948,6 +972,12 @@ export type PublicApiType = {
         roomNumber?: string;
         status: "active" | "checked_out";
       }>
+    >;
+    resetPin: FunctionReference<
+      "mutation",
+      "public",
+      { stayId: Id<"stays"> },
+      string
     >;
   };
   tasks: {
@@ -973,6 +1003,7 @@ export type PublicApiType = {
           detail?: string;
           doneAt?: number;
           escalatedAt?: number;
+          firstAcceptedAt?: number;
           guestNote?: string;
           hotelId: Id<"hotels">;
           itemId?: Id<"catalogItems">;
@@ -1007,6 +1038,7 @@ export type PublicApiType = {
           detail?: string;
           doneAt?: number;
           escalatedAt?: number;
+          firstAcceptedAt?: number;
           guestNote?: string;
           hotelId: Id<"hotels">;
           itemId?: Id<"catalogItems">;
@@ -1041,6 +1073,7 @@ export type PublicApiType = {
           detail?: string;
           doneAt?: number;
           escalatedAt?: number;
+          firstAcceptedAt?: number;
           guestNote?: string;
           hotelId: Id<"hotels">;
           itemId?: Id<"catalogItems">;
@@ -1075,6 +1108,7 @@ export type PublicApiType = {
           detail?: string;
           doneAt?: number;
           escalatedAt?: number;
+          firstAcceptedAt?: number;
           guestNote?: string;
           hotelId: Id<"hotels">;
           itemId?: Id<"catalogItems">;
@@ -1115,6 +1149,7 @@ export type PublicApiType = {
         detail?: string;
         doneAt?: number;
         escalatedAt?: number;
+        firstAcceptedAt?: number;
         guestNote?: string;
         hotelId: Id<"hotels">;
         itemId?: Id<"catalogItems">;
@@ -1140,7 +1175,7 @@ export type PublicApiType = {
     get: FunctionReference<
       "query",
       "public",
-      { taskId: Id<"tasks"> },
+      { taskId: string },
       {
         _creationTime: number;
         _id: Id<"tasks">;
@@ -1155,6 +1190,7 @@ export type PublicApiType = {
         doneAt?: number;
         escalatedAt?: number;
         estimatedMinutes?: number;
+        firstAcceptedAt?: number;
         guestNote?: string;
         hotelId: Id<"hotels">;
         itemId?: Id<"catalogItems">;
@@ -1589,6 +1625,7 @@ export type PublicApiType = {
           name: string;
           ownerUserId: Id<"users">;
           phone?: string;
+          requireGuestPin?: boolean;
           slug: string;
           timezone?: string;
           wifiName?: string;
@@ -1617,6 +1654,7 @@ export type PublicApiType = {
           externalId: string;
           imageUrl?: string;
           name: string;
+          profileSyncedAt?: number;
         };
       }>
     >;
