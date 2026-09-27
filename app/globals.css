@@ -216,6 +216,10 @@
  * Scrollbars: the page and inner scroll areas get a slim rounded bar that
  * follows the theme.
  */
+/* Keep the bar's space when a panel locks scrolling, so the page doesn't shift sideways mid-animation. */
+html {
+  scrollbar-gutter: stable;
+}
 * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--color-black) 22%, transparent) transparent;

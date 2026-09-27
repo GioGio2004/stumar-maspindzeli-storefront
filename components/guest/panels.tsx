@@ -930,7 +930,8 @@ function CheckoutPanel({ tile, data, onSent }: PanelProps) {
             <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3" role="radiogroup" aria-label="Check-out time">
               {options.map((option) => (
                 <button key={option} type="button" role="radio" aria-checked={option === time} onClick={() => setTime(option)} className="relative rounded-[22px] px-4 py-5 text-center ring-1 ring-black/10 sm:py-6">
-                  {option === time && <motion.span layoutId={`checkout-panel-time-${tile.id}`} className="absolute inset-0 rounded-[22px] bg-lime" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+                  {/* An outline and a soft tint, not solid lime: the text sits beside this span, so it keeps the panel's light colour. */}
+                  {option === time && <motion.span layoutId={`checkout-panel-time-${tile.id}`} className="absolute inset-0 rounded-[22px] bg-lime/20 ring-2 ring-ink dark:ring-lime" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
                   <span className="relative block text-2xl font-medium tabular-nums sm:text-3xl">{option}</span>
                   <span className="relative mt-1 block text-[12px] text-black/55">until</span>
                 </button>

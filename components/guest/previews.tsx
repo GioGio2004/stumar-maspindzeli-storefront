@@ -282,7 +282,7 @@ function BookingPreview({ items, slots }: { items: Item[]; slots: string[] }) {
               {i === selected && (
                 <motion.span layoutId="booking-preview-slot" className="absolute inset-0 rounded-full bg-lime" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
               )}
-              <span className={cn("relative", i === selected ? "font-medium" : "text-black/55")}>{slot}</span>
+              <span className={cn("relative", i === selected ? "font-medium text-[#111110]" : "text-black/55")}>{slot}</span>
             </span>
           ))}
         </div>

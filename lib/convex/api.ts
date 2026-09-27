@@ -591,6 +591,86 @@ export type PublicApiType = {
         { key: string | null; ok: true } | { message: string; ok: false }
       >;
     };
+    ai: {
+      clear: FunctionReference<
+        "mutation",
+        "public",
+        { secret: string; threadId: string },
+        null
+      >;
+      messages: FunctionReference<
+        "query",
+        "public",
+        {
+          paginationOpts: {
+            cursor: string | null;
+            endCursor?: string | null;
+            id?: number;
+            maximumBytesRead?: number;
+            maximumRowsRead?: number;
+            numItems: number;
+          };
+          secret: string;
+          streamArgs?:
+            | { kind: "list"; startOrder?: number }
+            | {
+                cursors: Array<{ cursor: number; streamId: string }>;
+                kind: "deltas";
+              };
+          threadId: string;
+        },
+        {
+          continueCursor: string;
+          isDone: boolean;
+          page: Array<any>;
+          pageStatus?: "SplitRecommended" | "SplitRequired" | null;
+          splitCursor?: string | null;
+          streams?:
+            | {
+                kind: "list";
+                messages: Array<{
+                  agentName?: string;
+                  format?: "UIMessageChunk" | "TextStreamPart";
+                  model?: string;
+                  order: number;
+                  provider?: string;
+                  providerOptions?: Record<string, Record<string, any>>;
+                  status: "streaming" | "finished" | "aborted";
+                  stepOrder: number;
+                  streamId: string;
+                  userId?: string;
+                }>;
+              }
+            | {
+                deltas: Array<{
+                  end: number;
+                  parts: Array<any>;
+                  start: number;
+                  streamId: string;
+                }>;
+                kind: "deltas";
+              };
+        }
+      >;
+      send: FunctionReference<
+        "mutation",
+        "public",
+        {
+          key?: string;
+          prompt: string;
+          secret: string;
+          threadId: string;
+          token?: string;
+        },
+        null
+      >;
+      start: FunctionReference<
+        "mutation",
+        "public",
+        { slug?: string; token?: string },
+        { secret: string; threadId: string }
+      >;
+    };
   };
   hotels: {
     create: FunctionReference<

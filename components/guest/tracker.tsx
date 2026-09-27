@@ -2,76 +2,142 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, ChevronUp, LoaderCircle, Star, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronUp, LoaderCircle, Sparkles, Star, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/convex/api";
 import type { GuestTask } from "@/lib/storefront";
 import { cn } from "@/lib/utils";
 import { errorInfo, useGuestAccess } from "./access";
+import { assistantMorph } from "./assistant";
 import { statusLabel, statusOrder, type RequestStatus } from "./hooks";
 
-/** Floating "my requests" pill. Live: it moves the moment staff accept or finish. */
-export function Tracker({ inert }: { inert?: boolean }) {
+/**
+ * The bar at the bottom: live requests and the AI concierge side by side.
+ * While a request is on its way the tracker takes the main stage and the
+ * assistant waits as a small circle; once everything is delivered they swap.
+ */
+export function Dock({ inert, assistantOpen, onAssistant }: { inert?: boolean; assistantOpen: boolean; onAssistant: () => void }) {
   const { token, keyArg, unlocked } = useGuestAccess();
   const tasks = useQuery(api.guest.requests.list, token && unlocked ? { token, key: keyArg } : "skip");
   const [open, setOpen] = useState(false);
   const visible = (tasks ?? []).filter((t) => t.status !== "cancelled");
   const latest = visible[0];
   const active = visible.filter((t) => t.status !== "done").length;
+  const trackerMain = latest !== undefined && active > 0;
 
   return (
     <div inert={inert} className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-3">
-      <AnimatePresence>
-        {latest && (
-          <motion.div
-            className="pointer-events-auto w-full max-w-md"
-            initial={{ y: 90, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 90, opacity: 0 }}
-            transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
-          >
-            <AnimatePresence>
-              {open && (
-                <motion.ul
-                  id="request-list"
-                  className="mb-2 max-h-[55vh] space-y-2 overflow-y-auto rounded-[26px] bg-white p-2.5 shadow-2xl ring-1 ring-black/5"
-                  initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 12, scale: 0.98 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  {visible.map((task) => (
-                    <RequestRow key={task.id} task={task} />
-                  ))}
-                </motion.ul>
-              )}
-            </AnimatePresence>
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-expanded={open}
-              aria-controls="request-list"
-              className="flex w-full items-center gap-3 rounded-full bg-ink py-2 pl-2 pr-4 text-left text-white shadow-2xl"
+      <motion.div
+        className="pointer-events-auto w-full max-w-md"
+        initial={{ y: 90, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
+      >
+        <AnimatePresence>
+          {open && latest && (
+            <motion.ul
+              id="request-list"
+              className="mb-2 max-h-[55vh] space-y-2 overflow-y-auto rounded-[26px] bg-white p-2.5 shadow-2xl ring-1 ring-black/5"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.25 }}
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-black">
-                {latest.status === "done" ? <Check className="size-4" strokeWidth={2.5} /> : <LoaderCircle className="size-4 animate-spin" />}
-              </span>
-              <span className="min-w-0 flex-1" aria-live="polite">
-                <span className="block truncate text-sm font-medium">
-                  {latest.title}
-                  {latest.quantity && latest.quantity > 1 && !latest.title.startsWith("Order") ? ` ×${latest.quantity}` : ""}
-                </span>
-                <span className="block truncate text-[12px] text-white/60">
-                  {statusLabel[latest.status as RequestStatus]} · {latest.departmentName}
-                </span>
-              </span>
-              {visible.length > 1 && <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[12px]">{active > 0 ? `${active} active` : "All done"}</span>}
-              <ChevronUp className={cn("size-4 shrink-0 transition-transform", open ? "rotate-0" : "rotate-180")} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              {visible.map((task) => (
+                <RequestRow key={task.id} task={task} />
+              ))}
+            </motion.ul>
+          )}
+        </AnimatePresence>
+        <div className="flex items-center justify-end gap-2">
+          <AnimatePresence initial={false} mode="popLayout">
+            {latest && (
+              <motion.button
+                key="tracker"
+                type="button"
+                layout
+                onClick={() => setOpen((o) => !o)}
+                aria-expanded={open}
+                aria-controls="request-list"
+                aria-label={trackerMain ? undefined : `My requests: ${active > 0 ? `${active} active` : "all done"}`}
+                style={{ borderRadius: 9999 }}
+                className={cn(
+                  "flex items-center bg-ink text-left text-white shadow-2xl",
+                  trackerMain ? "min-w-0 flex-1 gap-3 py-2 pl-2 pr-4" : "size-14 shrink-0 justify-center",
+                )}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={dockSpring}
+              >
+                <motion.span layout="position" className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-black">
+                  {latest.status === "done" ? <Check className="size-4" strokeWidth={2.5} /> : <LoaderCircle className="size-4 animate-spin" />}
+                </motion.span>
+                {trackerMain && (
+                  <>
+                    <motion.span layout="position" className="min-w-0 flex-1" aria-live="polite" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+                      <span className="block truncate text-sm font-medium">
+                        {latest.title}
+                        {latest.quantity && latest.quantity > 1 && !latest.title.startsWith("Order") ? ` ×${latest.quantity}` : ""}
+                      </span>
+                      <span className="block truncate text-[12px] text-white/60">
+                        {statusLabel[latest.status as RequestStatus]} · {latest.departmentName}
+                      </span>
+                    </motion.span>
+                    {visible.length > 1 && (
+                      <motion.span layout="position" className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[12px]">
+                        {active} active
+                      </motion.span>
+                    )}
+                    <ChevronUp className={cn("size-4 shrink-0 transition-transform", open ? "rotate-0" : "rotate-180")} />
+                  </>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
+          {!assistantOpen && <AskAiButton wide={!trackerMain} onClick={onAssistant} />}
+        </div>
+      </motion.div>
     </div>
+  );
+}
+
+const dockSpring = { type: "spring", bounce: 0.18, duration: 0.55 } as const;
+
+function AskAiButton({ wide, onClick }: { wide: boolean; onClick: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      layoutId="assistant-surface"
+      onClick={onClick}
+      aria-haspopup="dialog"
+      aria-label="Ask AI"
+      style={{ borderRadius: 9999 }}
+      className={cn(
+        "flex items-center bg-ink text-left text-white shadow-2xl",
+        wide ? "min-w-0 flex-1 gap-3 py-2 pl-2 pr-4" : "size-14 shrink-0 justify-center",
+      )}
+      transition={assistantMorph}
+    >
+      {wide ? (
+        <>
+          <motion.span layout="position" className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-black">
+            <Sparkles className="size-4" />
+          </motion.span>
+          <motion.span layout="position" className="min-w-0 flex-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+            <span className="block truncate text-sm font-medium">Ask AI anything</span>
+            <span className="block truncate text-[12px] text-white/60">Your concierge, in any language</span>
+          </motion.span>
+          <motion.span layout="position" className="grid size-8 shrink-0 place-items-center rounded-full bg-white/10">
+            <ArrowUpRight className="size-4" />
+          </motion.span>
+        </>
+      ) : (
+        <motion.span layout="position" className="text-[13px] font-medium leading-none" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+          Ask AI
+        </motion.span>
+      )}
+    </motion.button>
   );
 }
 

@@ -46,6 +46,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // The phone keyboard shrinks the page instead of covering the AI chat's input.
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0f0f0e" },

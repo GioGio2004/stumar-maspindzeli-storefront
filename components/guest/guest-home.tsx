@@ -10,6 +10,7 @@ import { tilePhoto } from "@/lib/photos";
 import { gel, hotelNow, itemsFor, orderable, type StorefrontData, type Tile } from "@/lib/storefront";
 import { cn } from "@/lib/utils";
 import { GuestAccessProvider } from "./access";
+import { AssistantPanel } from "./assistant";
 import { Clover, Dots, Leaf, Ring, Star4 } from "./glyphs";
 import { AnimationsPaused } from "./hooks";
 import { iconFor, IconByKey } from "./icons";
@@ -17,7 +18,7 @@ import { notchMask } from "./notch";
 import { PanelBody } from "./panels";
 import { TilePreview, type ConciergeSample } from "./previews";
 import { Scribble } from "./scribble";
-import { Tracker } from "./tracker";
+import { Dock } from "./tracker";
 import { ThemeButton } from "../theme";
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -78,6 +79,7 @@ export function GuestHome({ data, token }: { data: StorefrontData; token: string
 
 function GuestHomeInner({ data, token }: { data: StorefrontData; token: string | null }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // "Today" is the hotel's day, on the server and in the browser alike.
   const [weekday] = useState(() => hotelNow(data.hotel.timezone).weekday);
@@ -103,7 +105,16 @@ function GuestHomeInner({ data, token }: { data: StorefrontData; token: string |
     },
     [token, track],
   );
-  const close = useCallback(() => setOpenId(null), []);
+  const close = useCallback(() => {
+    setOpenId(null);
+    setAssistantOpen(false);
+  }, []);
+  const openAssistant = useCallback(() => {
+    setAssistantOpen(true);
+    if (token) track({ token, kind: "view_feature", target: "assistant" }).catch(() => {});
+  }, [token, track]);
+  // A tile panel or the AI concierge covers the page.
+  const covered = openId !== null || assistantOpen;
 
   const onSent = useCallback((message: string) => {
     setOpenId(null);
@@ -114,7 +125,7 @@ function GuestHomeInner({ data, token }: { data: StorefrontData; token: string |
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
-    if (!openId) return;
+    if (!covered) return;
     const root = document.documentElement;
     const previous = root.style.overflow;
     root.style.overflow = "hidden";
@@ -127,7 +138,7 @@ function GuestHomeInner({ data, token }: { data: StorefrontData; token: string |
       root.style.overflow = previous;
       window.removeEventListener("keydown", onKey);
     };
-  }, [openId, close]);
+  }, [covered, close]);
 
   useEffect(() => {
     if (openId !== null || lastOpened.current === null) return;
@@ -141,9 +152,9 @@ function GuestHomeInner({ data, token }: { data: StorefrontData; token: string |
   const concierge = tiles.find((t) => t.type === "concierge") ?? tiles[0];
 
   return (
-    <AnimationsPaused.Provider value={openId !== null}>
+    <AnimationsPaused.Provider value={covered}>
     <MotionConfig reducedMotion="user">
-      <div id="top" inert={openId !== null} className="mx-auto w-full max-w-[1400px] flex-1 px-3 sm:px-6">
+      <div id="top" inert={covered} className="mx-auto w-full max-w-[1400px] flex-1 px-3 sm:px-6">
         <header className="flex h-20 items-center justify-between gap-4 sm:h-24">
           <a href="#top" className="flex min-w-0 items-center gap-2.5" aria-label={`${data.hotel.name}, home`}>
             <Dots className="size-6 shrink-0" />
@@ -212,7 +223,7 @@ function GuestHomeInner({ data, token }: { data: StorefrontData; token: string |
         </main>
       </div>
 
-      <footer inert={openId !== null} className="mt-16 bg-graphite pb-24 text-white">
+      <footer inert={covered} className="mt-16 bg-graphite pb-24 text-white">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-6 pt-10 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <Dots className="size-6" />
@@ -248,7 +259,11 @@ function GuestHomeInner({ data, token }: { data: StorefrontData; token: string |
         )}
       </AnimatePresence>
 
-      <Tracker inert={openId !== null} />
+      <AnimatePresence>
+        {assistantOpen && <AssistantPanel key="assistant" data={data} token={token} weekday={weekday} onClose={close} />}
+      </AnimatePresence>
+
+      <Dock inert={openId !== null} assistantOpen={assistantOpen} onAssistant={openAssistant} />
     </MotionConfig>
     </AnimationsPaused.Provider>
   );
@@ -447,7 +462,17 @@ function FeaturePanel({ tile, onClose, children }: { tile: Tile; onClose: () => 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-2 sm:items-center sm:p-6">
-      <motion.div aria-hidden="true" className="absolute inset-0 bg-scrim backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} onClick={onClose} />
+      {/* A plain scrim: a full-page backdrop blur would repaint on every frame of the morph. */}
+      <motion.div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={{ background: "rgb(10 10 9 / 0.6)" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        onClick={onClose}
+      />
       <motion.div
         layoutId={`card-${tile.id}`}
         transition={morph}
@@ -455,9 +480,22 @@ function FeaturePanel({ tile, onClose, children }: { tile: Tile; onClose: () => 
         aria-modal="true"
         aria-labelledby={`panel-title-${tile.id}`}
         style={{ borderRadius: 30 }}
-        className={cn("relative flex max-h-full w-full max-w-5xl flex-col overflow-hidden shadow-2xl", dark ? "bg-graphite text-white" : "bg-white text-foreground")}
+        className={cn(
+          "relative flex max-h-full w-full max-w-5xl flex-col overflow-hidden shadow-2xl",
+          // A photo card always uses the dark palette, so its text reads over the picture in either theme.
+          photo ? "dark bg-[#161614] text-foreground" : dark ? "bg-graphite text-white" : "bg-white text-foreground",
+        )}
       >
-        <div className="flex items-center gap-3 px-5 pt-5 sm:px-8 sm:pt-7">
+        {photo && (
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+            <Image src={photo} alt="" fill unoptimized sizes="(min-width: 1024px) 1024px, 100vw" className="object-cover" />
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(180deg, rgb(14 14 13 / 0.5), rgb(14 14 13 / 0.78) 38%, rgb(14 14 13 / 0.9))" }}
+            />
+          </div>
+        )}
+        <div className="relative flex items-center gap-3 px-5 pt-5 sm:px-8 sm:pt-7">
           <motion.span layoutId={`icon-${tile.id}`} transition={morph} className={cn("grid size-11 shrink-0 place-items-center rounded-full", dark ? "bg-white/10" : "bg-panel")}>
             <IconByKey name={tile.icon} className="size-[18px]" />
           </motion.span>
@@ -481,16 +519,11 @@ function FeaturePanel({ tile, onClose, children }: { tile: Tile; onClose: () => 
           </button>
         </div>
         <motion.div
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-4 sm:px-8 sm:pb-8"
+          className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-4 sm:px-8 sm:pb-8"
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0, transition: { delay: 0.16, duration: 0.4, ease } }}
           exit={{ opacity: 0, transition: { duration: 0.1 } }}
         >
-          {photo && (
-            <div className="relative mb-5 h-40 overflow-hidden rounded-[24px] bg-panel sm:h-52">
-              <Image src={photo} alt="" fill unoptimized sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" />
-            </div>
-          )}
           {children}
         </motion.div>
       </motion.div>
