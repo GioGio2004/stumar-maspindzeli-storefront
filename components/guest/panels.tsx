@@ -23,8 +23,10 @@ import {
   Ticket,
   type LucideIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/convex/api";
+import { itemPhoto } from "@/lib/photos";
 import {
   eventsToday,
   gel,
@@ -426,40 +428,58 @@ function MenuPanel({ tile, data, roomLabel, onSent }: PanelProps) {
             {items.length === 0 ? (
               <Empty text="The menu is empty right now." />
             ) : (
-              <ul>
+              <ul className="grid gap-2 sm:grid-cols-2">
                 {items.map((item) => {
                   const n = qty[item.id] ?? 0;
                   const max = item.allowQuantity ? (item.maxQuantity ?? 9) : 1;
+                  const photo = itemPhoto(item);
                   return (
-                    <li key={item.id} className="flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-paper">
-                      <span className={cn("size-2 shrink-0 rounded-full ring-1 ring-black/10", n > 0 ? "bg-lime" : "bg-panel")} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[15px]">{item.title}</span>
-                        {item.description && <span className="block text-[12px] text-black/45">{item.description}</span>}
-                      </span>
-                      <span className="text-sm tabular-nums text-black/55">{gel(item.price ?? 0)}</span>
-                      {n > 0 && max > 1 ? (
-                        <QtyStepper value={n} max={max} onChange={(v) => setQty((q) => ({ ...q, [item.id]: v }))} label={item.title} />
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setQty((q) => ({ ...q, [item.id]: n > 0 ? 0 : 1 }))}
-                          aria-pressed={n > 0}
-                          className={cn(
-                            "inline-flex h-8 items-center gap-1 rounded-full px-3 text-[13px] font-medium transition",
-                            n > 0 ? "bg-ink text-white" : "bg-panel hover:bg-ink hover:text-white",
+                    <li
+                      key={item.id}
+                      className={cn("flex flex-col overflow-hidden rounded-[20px] bg-paper ring-2 transition-shadow", n > 0 ? "ring-lime" : "ring-transparent")}
+                    >
+                      {photo && (
+                        <div className="relative aspect-[16/10] bg-panel">
+                          <Image src={photo} alt={item.title} fill unoptimized sizes="(min-width: 640px) 360px, 100vw" className="object-cover" />
+                          <span className="absolute left-2.5 top-2.5 rounded-full bg-white px-2.5 py-1 text-[13px] font-medium tabular-nums shadow-sm">
+                            {gel(item.price ?? 0)}
+                          </span>
+                          {n > 0 && (
+                            <span className="absolute right-2.5 top-2.5 grid size-8 place-items-center rounded-full bg-lime text-[13px] font-semibold tabular-nums text-black">
+                              {n}
+                            </span>
                           )}
-                        >
-                          {n > 0 ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
-                          {n > 0 ? "Added" : "Add"}
-                        </button>
+                        </div>
                       )}
+                      <div className="flex flex-1 items-end gap-3 p-3">
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[15px] font-medium">{item.title}</span>
+                          {item.description && <span className="mt-0.5 block text-[12px] leading-snug text-black/45">{item.description}</span>}
+                          {!photo && <span className="mt-1 block text-sm tabular-nums text-black/55">{gel(item.price ?? 0)}</span>}
+                        </span>
+                        {n > 0 && max > 1 ? (
+                          <QtyStepper value={n} max={max} onChange={(v) => setQty((q) => ({ ...q, [item.id]: v }))} label={item.title} />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setQty((q) => ({ ...q, [item.id]: n > 0 ? 0 : 1 }))}
+                            aria-pressed={n > 0}
+                            className={cn(
+                              "inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-medium transition",
+                              n > 0 ? "bg-ink text-white" : "bg-panel hover:bg-ink hover:text-white",
+                            )}
+                          >
+                            {n > 0 ? <Check className="size-3.5" /> : <Plus className="size-3.5" />}
+                            {n > 0 ? "Added" : "Add"}
+                          </button>
+                        )}
+                      </div>
                     </li>
                   );
                 })}
               </ul>
             )}
-            <div className="mx-3 mb-2 mt-1 flex items-center justify-between border-t border-dashed border-black/10 pt-3 text-[15px] font-medium">
+            <div className="mx-3 mb-2 mt-3 flex items-center justify-between border-t border-dashed border-black/10 pt-3 text-[15px] font-medium">
               <span className="truncate">Total · {roomLabel}</span>
               <span className="tabular-nums">{gel(total)}</span>
             </div>

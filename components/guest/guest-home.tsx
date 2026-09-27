@@ -3,8 +3,10 @@
 import { useMutation } from "convex/react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { ArrowRight, ArrowUpRight, Check, DoorOpen, X } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/convex/api";
+import { tilePhoto } from "@/lib/photos";
 import { gel, hotelNow, itemsFor, orderable, type StorefrontData, type Tile } from "@/lib/storefront";
 import { cn } from "@/lib/utils";
 import { GuestAccessProvider } from "./access";
@@ -327,8 +329,10 @@ function Hero({ data, nav, onOpen }: { data: StorefrontData; nav: Tile[]; onOpen
 }
 
 function TileCard({ tile, preview, onOpen }: { tile: Tile; preview: ReactNode; onOpen: () => void }) {
+  const photo = tilePhoto(tile);
   // The concierge chat is drawn for a dark surface, so it ignores the tone setting.
-  const dark = tile.tone === "dark" || tile.type === "concierge";
+  // A photo card reads as dark too: light text over a scrim, the preview in a light inner card.
+  const dark = photo !== undefined || tile.tone === "dark" || tile.type === "concierge";
   const split = tile.size === "wide";
 
   return (
@@ -346,12 +350,25 @@ function TileCard({ tile, preview, onOpen }: { tile: Tile; preview: ReactNode; o
         aria-label={tile.title}
         aria-describedby={`tile-blurb-${tile.id}`}
         className={cn(
-          "group flex h-full w-full flex-col p-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset",
+          "group relative flex h-full w-full flex-col p-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset",
           dark ? "focus-visible:ring-lime" : "focus-visible:ring-ink",
           split && "md:grid md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-5",
         )}
       >
-        <div className={cn("flex flex-col", split && "md:h-full")}>
+        {photo && (
+          <span aria-hidden="true" className="absolute inset-0 overflow-hidden">
+            <Image
+              src={photo}
+              alt=""
+              fill
+              unoptimized
+              sizes="(min-width: 768px) 50vw, 100vw"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            />
+            <span className="absolute inset-0 bg-linear-to-b from-black/70 via-black/30 to-black/75" />
+          </span>
+        )}
+        <div className={cn("relative flex flex-col", split && "md:h-full")}>
           <div className="flex items-start justify-between gap-3">
             <motion.span layoutId={`icon-${tile.id}`} transition={morph} className={cn("grid size-11 shrink-0 place-items-center rounded-full", dark ? "bg-white/10" : "bg-panel")}>
               <IconByKey name={tile.icon} className="size-[18px]" />
@@ -382,7 +399,7 @@ function TileCard({ tile, preview, onOpen }: { tile: Tile; preview: ReactNode; o
             )}
           </div>
         </div>
-        <div aria-hidden="true" className={cn("mt-auto pt-4", split && "md:mt-0 md:flex md:flex-col md:justify-center md:pt-0")}>
+        <div aria-hidden="true" className={cn("relative mt-auto pt-4", split && "md:mt-0 md:flex md:flex-col md:justify-center md:pt-0")}>
           {dark && !DARK_NATIVE.has(tile.type) ? <div className="rounded-[20px] bg-white p-2.5 text-black">{preview}</div> : preview}
         </div>
       </button>
@@ -422,6 +439,7 @@ function IntroCell({ onOpen }: { onOpen: () => void }) {
 
 function FeaturePanel({ tile, onClose, children }: { tile: Tile; onClose: () => void; children: ReactNode }) {
   const dark = tile.type === "concierge" || (tile.tone === "dark" && DARK_NATIVE.has(tile.type));
+  const photo = tilePhoto(tile);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
@@ -468,6 +486,11 @@ function FeaturePanel({ tile, onClose, children }: { tile: Tile; onClose: () => 
           animate={{ opacity: 1, y: 0, transition: { delay: 0.16, duration: 0.4, ease } }}
           exit={{ opacity: 0, transition: { duration: 0.1 } }}
         >
+          {photo && (
+            <div className="relative mb-5 h-40 overflow-hidden rounded-[24px] bg-panel sm:h-52">
+              <Image src={photo} alt="" fill unoptimized sizes="(min-width: 1024px) 960px, 100vw" className="object-cover" />
+            </div>
+          )}
           {children}
         </motion.div>
       </motion.div>
